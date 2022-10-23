@@ -27,9 +27,28 @@ mysqlRestore(){
 	#Establece una conexion ssh hacia el hostname indicado y ejecuta los siguientes comandos a nivel de sistema
 	ssh mysql bash -c "'
 
+		#Para comprobar si el paquete phpmyadmin existe
+		#dpkg -l mysql-server &> /dev/null
 
-		tar -xzf mysql* && rm -rf mysql*
-		mysql -u root --password=12345 < backup.sql && rm -rf backup.sql
+		#Si el codigo de estado del comando anterior es igual a cero el paquete esta instalado
+		#if [ echo $? == 0 ];then
+		#if [ -d /etc/mysql ];then
+
+			#Lleva a cabo el restore de todas las bases de datos
+			tar -xzf mysql* && rm -rf mysql*
+			mysql -u root --password=12345 < backup.sql && rm -rf backup.sql
+
+		#Si el codigo de estado es diferente de cero el paquete no esta instalado
+		#else
+
+			#Instala los paquetes necesarios: apache2, mysql-server y phpmyadmin
+			#apt-get update &> /dev/null && apt-get install apache2 mysql-server phpmyadmin
+
+			#Lleva a cabo el restore de todas las bases de datos
+			#tar -xzf mysql* && rm -rf mysql*
+			#mysql -u root --password=12345 < backup.sql && rm -rf backup.sql
+
+		fi
 
 	'"
 	if [ "$(echo $?)" == "0" ];then
@@ -46,13 +65,36 @@ mysqlRestore(){
 
 dnsRestore(){
 
-	scp $resPath/$backup/dns* dns:/etc/bind/
+	scp $resPath/$backup/dns* dns:
 
 	#Establece una conexion ssh hacia el hostname indicado y ejecuta los siguientes comandos a nivel de sistema
 	ssh dns bash -c "'
 
-		cd /etc/bind
-		tar -xzf dns* && rm -rf dns*
+		#Para compruebar si el paquete bind9 esta instalado
+		#dpkg -L bind9 &> /dev/null
+
+		#Si el codigo de estado del comando anterior es igual a cero el paquete esta instalado
+		#if [ echo $? -eq 0 ];then
+		if [ -d /etc/bind ];then
+
+			#rm /etc/bind/* && \ 
+			mv dns* /etc/bind/
+
+			#Lleva a cabo el restore de todo el contenido del directorio /etc/bind/
+			cd /etc/bind && tar -xzf dns* && rm -rf dns*
+
+		#Si el codigo de estado es diferente de cero el paquete no esta instalado
+		else
+
+			#Instala el paquete bind9
+			apt-get update &>/dev/null && apt-get -y install bind9 &>/dev/null
+
+			mv dns* /etc/bind/
+
+			#Lleva a cabo el restore de todo el contenido del directorio /etc/bind/
+			cd /etc/bind && tar -xzf dns* && rm -rf dns*
+
+		fi
 
 	'"
 
@@ -75,9 +117,32 @@ apacheRestore(){
 	#Establece una conexion ssh hacia el hostname indicado y ejecuta los siguientes comandos a nivel de sistema
 	ssh apache2 bash -c "'
 
-		tar -xzf apache2* && rm -rf apache2-*
-		mv apache2.tar /etc/apache2/ && cd /etc/apache2 && tar -xf apache2.tar && rm -rf apache2.tar
-		mv /root/www.tar /var/www/ && cd /var/www && tar -xf www.tar && rm -rf www.tar
+		#Para comprobar si el paquete apache2 esta instalado
+		#dpkg -l apache2 &> /dev/null
+
+		#Si el codigo de estado del comando anterior es igual a cero el paquete esta instalado
+		#if [ "$(echo $?)" == "0" ];then
+		if [ -d /etc/apache2 ] && [ -d /var/www ];then
+
+			#Lleva a cabo el restore de todo el contenido de los directorios /etc/apache2 y /var/www/
+			tar -xzf apache2* && rm -rf apache2-*
+			mv apache2.tar /etc/apache2/ && cd /etc/apache2 && tar -xf apache2.tar && rm -rf apache2.tar
+			mv /root/www.tar /var/www/ && cd /var/www && tar -xf www.tar && rm -rf www.tar
+
+		#Si el codigo de estado es diferente de cero el paquete no esta instalado
+		else
+
+			#Instala el paquete apache2
+			apt-get update &> /dev/null  && apt-get -y install apache2 &> /dev/null
+
+			#Lleva a cabo el restore de todo el contenido de los directorios /etc/apache2 y /var/www/
+			tar -xzf apache2* && rm -rf apache2-*
+			mv apache2.tar /etc/apache2/ && cd /etc/apache2 && tar -xf apache2.tar && rm -rf apache2.tar
+			mv /root/www.tar /var/www/ && cd /var/www && tar -xf www.tar && rm -rf www.tar
+
+			service apache2 restart
+
+		fi
 
 	'"
 
@@ -93,11 +158,12 @@ apacheRestore(){
 
 }
 
-
 #Primer argumento
 backup=$1
+
 #Se almacenan 3 argumentos en la variable hostnames.
 hostnames=("$2" "$3" "$4")
+
 #variable que contiene la ruta del directorio de backups.
 resPath=/home/BackUp
 
@@ -163,6 +229,7 @@ else
 	if [ "$var" == "1" ]; then
 
 		helpPanel
+
 	fi
 
 fi

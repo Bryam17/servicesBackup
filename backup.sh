@@ -23,28 +23,48 @@ mysqlBackup(){
 	#Establece una conexion ssh hacia el hostname indicado y ejecuta los siguientes comandos a nivel de sistema
 	ssh mysql bash -c "'
 
-		#ifconfig | grep "inet" | head -n1 | tr -s '[:blank:]'
-		#echo ""
 		rm -rf mysql*
 		#Backup de todas las bases de datos
 		mysqldump -u root --password=123 --all-databases > backup.sql
 		tar -czf mysql-$(date "+%d-%m-%Y_%H-%M").tar.gz backup.sql
 
 	'"
-	#si hay un copia de seguridad en el directorio lo elimina
-	rm -rf $path/$dir/mysql*
-	#Si el directorio ya existe solo copiara el archivo en el.
-	if test -d $path/$dir; then
-		scp -rp mysql:mysql* $path/$dir
 
-	#Si no existe lo creara y copiara el archivo.
+	#Si el comando anterior devuelve un codigo de estado igual a cero es que se ejecuto correctamente
+	if [ "$(echo $?)" == "0" ];then
+
+		#si hay un copia de seguridad en el directorio lo elimina
+		rm -rf $path/$dir/mysql*
+
+		#Si el directorio ya existe solo copiara el archivo en el.
+		if test -d $path/$dir; then
+
+			scp -rp mysql:mysql* $path/$dir
+
+		#Si no existe lo creara y copiara el archivo.
+		else
+
+			mkdir $path/$dir
+			scp -rp mysql:mysql* $path/$dir
+
+		fi
+
+		ssh mysql bash -c "'
+
+		rm -rf mysql*
+
+		'"
+
+		echo -e "\n[*] Backup del servidor de base de datos realizado exitosamente."
+		echo -e " >  Archivo copiado en $path/$dir/\n"
+
+	#Si el codigo de estado es diferente de cero hubo un error
 	else
-		mkdir $path/$dir
-		scp -rp mysql:mysql* $path/$dir
-	fi
 
-	echo -e "\n[*] Backup del servidor de base de datos realizado exitosamente."
-	echo -e " >  Archivo copiado en $path/$dir/\n"
+		echo -e "\n[*] ERROR\n"
+		exit 1;
+
+	fi
 
 }
 
@@ -52,26 +72,46 @@ dnsBackup(){
 
 	#Establece una conexion ssh hacia el hostname indicado y ejecuta los siguientes comandos a nivel de sistema
 	ssh dns bash -c "'
-		#ifconfig | grep "inet" | head -n1 | tr -s '[:blank:]'
+
 		rm -rf dns*
+
 		#Backup del servicio bind9
 		cd /etc/bind/ && tar -czf /root/dns-$(date "+%d-%m-%Y_%H-%M").tar.gz . 
 	'"
-	rm -rf $path/$dir/dns*
 
-	#Si el directorio ya existe solo copiara el archivo en el.
-	if test -d $path/$dir; then
-		scp -rp dns:dns* $path/$dir
+	#Si el comando anterior devuelve un codigo de estado igual a cero es que se ejecuto correctamente
+	if [ "$(echo $?)" == "0" ];then
 
-	#Si no existe lo creara y copiara el archivo.
+		rm -rf $path/$dir/dns*
+
+		#Si el directorio ya existe solo copiara el archivo en el.
+		if test -d $path/$dir; then
+
+			scp -rp dns:dns* $path/$dir
+
+		#Si no existe lo creara y copiara el archivo.
+		else
+
+			mkdir $path/$dir
+			scp -rp dns:dns* $path/$dir
+		fi
+
+		ssh dns bash -c "'
+
+		rm -rf dns*
+
+		'"
+
+		echo -e "\n[*] Backup del servidor dns realizado exitosamente."
+		echo -e " >  Archivo copiado en $path/$dir/\n"
+
+	#Si el codigo de estado es diferente de cero hubo error 
 	else
 
-		mkdir $path/$dir
-		scp -rp dns:dns* $path/$dir
-	fi
+		echo -e "\n[*] ERROR\n"
+		exit 1;
 
-	echo -e "\n[*] Backup del servidor dns realizado exitosamente."
-	echo -e " >  Archivo copiado en $path/$dir/\n"
+	fi
 
 }
 
@@ -79,32 +119,50 @@ apacheBackup(){
 
 	#Establece una conexion ssh hacia el hostname indicado y ejecuta los siguientes comandos a nivel de sistema
 	ssh apache2 bash -c "'
-		#ifconfig | grep "inet" | head -n1 | tr -s '[:blank:]'
+
 		rm -rf apache2*
+
 		#Backup del servicio bind9
 		(cd /etc/apache2/ && tar -cf /root/apache2.tar .) && (cd /var/www/ && tar -cf /root/www.tar .)
 		cd /root/
 		tar -czf apache2-$(date "+%d-%m-%Y_%H-%M").tar.gz apache2.tar www.tar
 		rm -rf apache2.tar && rm -rf www.tar
 	'"
-	rm -rf $path/$dir/apache2*
 
-	#Si el directorio ya existe solo copiara el archivo en el.
-	if test -d $path/$dir; then
-		scp -rp apache2:apache2* $path/$dir
+	#Si el comando anterior devuelve un codigo de estado igual a cero es que se ejecuto correctamente
+	if [ "$(echo $?)" == "0" ];then
 
-	#Si no existe lo creara y copiara el archivo.
+		rm -rf $path/$dir/apache2*
+
+		#Si el directorio ya existe solo copiara el archivo en el.
+		if test -d $path/$dir; then
+			scp -rp apache2:apache2* $path/$dir
+
+		#Si no existe lo creara y copiara el archivo.
+		else
+
+			mkdir $path/$dir
+			scp -rp apache2:apache2* $path/$dir
+		fi
+
+		ssh apache2 bash -c "'
+
+			rm -rf /root/apache2*
+
+		'"
+
+		echo -e "\n[*] Backup del servidor Web realizado exitosamente."
+		echo -e " >  Archivo copiado en $path/$dir/\n"
+
+	#Si el codigo de estado es diferente de cero hubo error
 	else
 
-		mkdir $path/$dir
-		scp -rp apache2:apache2* $path/$dir
+		echo -e "\n[*] ERROR\n"
+		exit 1;
+
 	fi
 
-	echo -e "\n[*] Backup del servidor Web realizado exitosamente."
-	echo -e " >  Archivo copiado en $path/$dir/\n"
-
 }
-
 
 #Se pasan argumentos como array y se almacenan en la variable hostnames
 hostnames=("$@")
