@@ -9,7 +9,7 @@ helpPanel(){
 	echo -e "\t    [>] ./restore [backup_dir] [hostname]"
 	echo -e "\t    [>] Ejemplo: ./restore.sh 15-10-22 mysql apache2 dns"
 	echo -e "\t    [>] Se pueden proporcionar todos los parametros o algunos de ellos."
-	echo -e "\t    [>] Si no se pasan parametros, se tomaran todos los parametros en cuenta.\n"
+	echo -e "\t    [>] Si no se pasan hostnames como parametros, se tomaran todos en cuenta.\n"
 	echo -e "\t[*] Parametros validos: \n"
 	echo -e "\t    [>] mysql"
 	echo -e "\t    [>] apache2"
@@ -27,26 +27,22 @@ mysqlRestore(){
 	#Establece una conexion ssh hacia el hostname indicado y ejecuta los siguientes comandos a nivel de sistema
 	ssh mysql bash -c "'
 
-		#Para comprobar si el paquete phpmyadmin existe
-		#dpkg -l mysql-server &> /dev/null
-
-		#Si el codigo de estado del comando anterior es igual a cero el paquete esta instalado
-		#if [ echo $? == 0 ];then
-		#if [ -d /etc/mysql ];then
+		#Si el directorio mysql existe, mysql está instalado
+		if [ -d /etc/mysql ];then
 
 			#Lleva a cabo el restore de todas las bases de datos
 			tar -xzf mysql* && rm -rf mysql*
 			mysql -u root --password=12345 < backup.sql && rm -rf backup.sql
 
-		#Si el codigo de estado es diferente de cero el paquete no esta instalado
-		#else
+		#Si el directorio no existe, el paquete será instalado
+		else
 
-			#Instala los paquetes necesarios: apache2, mysql-server y phpmyadmin
-			#apt-get update &> /dev/null && apt-get install apache2 mysql-server phpmyadmin
+			#Instala los paquetes necesarios: apache2, mysql-server
+			apt-get update &> /dev/null && apt-get -y install apache2 mysql-server &>/dev/null
 
 			#Lleva a cabo el restore de todas las bases de datos
-			#tar -xzf mysql* && rm -rf mysql*
-			#mysql -u root --password=12345 < backup.sql && rm -rf backup.sql
+			tar -xzf mysql* && rm -rf mysql*
+			mysql -u root --password=12345 < backup.sql && rm -rf backup.sql
 
 		fi
 
@@ -70,11 +66,7 @@ dnsRestore(){
 	#Establece una conexion ssh hacia el hostname indicado y ejecuta los siguientes comandos a nivel de sistema
 	ssh dns bash -c "'
 
-		#Para compruebar si el paquete bind9 esta instalado
-		#dpkg -L bind9 &> /dev/null
-
-		#Si el codigo de estado del comando anterior es igual a cero el paquete esta instalado
-		#if [ echo $? -eq 0 ];then
+		#Si el directorio bind existe, bind9 está instalado
 		if [ -d /etc/bind ];then
 
 			#rm /etc/bind/* && \ 
@@ -83,7 +75,7 @@ dnsRestore(){
 			#Lleva a cabo el restore de todo el contenido del directorio /etc/bind/
 			cd /etc/bind && tar -xzf dns* && rm -rf dns*
 
-		#Si el codigo de estado es diferente de cero el paquete no esta instalado
+		#Si el directorio no existe, el paquete será instalado
 		else
 
 			#Instala el paquete bind9
@@ -117,11 +109,7 @@ apacheRestore(){
 	#Establece una conexion ssh hacia el hostname indicado y ejecuta los siguientes comandos a nivel de sistema
 	ssh apache2 bash -c "'
 
-		#Para comprobar si el paquete apache2 esta instalado
-		#dpkg -l apache2 &> /dev/null
-
-		#Si el codigo de estado del comando anterior es igual a cero el paquete esta instalado
-		#if [ "$(echo $?)" == "0" ];then
+		#Si el directorio apache2 y www existen, apache2 está instalado
 		if [ -d /etc/apache2 ] && [ -d /var/www ];then
 
 			#Lleva a cabo el restore de todo el contenido de los directorios /etc/apache2 y /var/www/
@@ -129,7 +117,7 @@ apacheRestore(){
 			mv apache2.tar /etc/apache2/ && cd /etc/apache2 && tar -xf apache2.tar && rm -rf apache2.tar
 			mv /root/www.tar /var/www/ && cd /var/www && tar -xf www.tar && rm -rf www.tar
 
-		#Si el codigo de estado es diferente de cero el paquete no esta instalado
+		#Si el directorio no existe, apache2 será instalado
 		else
 
 			#Instala el paquete apache2
@@ -161,7 +149,7 @@ apacheRestore(){
 #Primer argumento
 backup=$1
 
-#Se almacenan 3 argumentos en la variable hostnames.
+#Se almacenan 3 argumentos como array en la variable hostnames.
 hostnames=("$2" "$3" "$4")
 
 #variable que contiene la ruta del directorio de backups.
@@ -191,7 +179,7 @@ else
 
 		#Si se pasan hostnames
 		else
-			#Si se pasan argumentos recorre cada elemento del array.
+			#Si se pasan hostnames recorre cada elemento del array.
 			for hostname in ${hostnames[@]};do
 
 				if [  "$hostname" == "mysql" ];then
@@ -206,7 +194,7 @@ else
 
 					apacheRestore
 
-				#Si no se pasa como argumentos ninguna de las opciones anteriores
+				#Si no se pasa como argumento ninguna de las opciones anteriores
 				else
 
 					let var=1
