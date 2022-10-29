@@ -50,13 +50,11 @@ mysqlRestore(){
 	if [ "$(echo $?)" == "0" ];then
 
 		echo -e "\n[*] Restore del servidor de base de datos realizado exitosamente.\n"
-
 	else
 
 		exit 1;
-
 	fi
-
+	
 }
 
 dnsRestore(){
@@ -85,6 +83,8 @@ dnsRestore(){
 
 			#Lleva a cabo el restore de todo el contenido del directorio /etc/bind/
 			cd /etc/bind && tar -xzf dns* && rm -rf dns*
+			
+			service bind9 restart
 
 		fi
 
@@ -93,11 +93,9 @@ dnsRestore(){
 	if [ "$(echo $?)" == "0" ];then
 
 		echo -e "\n[*] Restore del servidor dns realizado exitosamente.\n"
-
 	else
 
 		exit 1;
-
 	fi
 
 }
@@ -137,11 +135,9 @@ apacheRestore(){
 	if [ "$(echo $?)" == "0" ];then
 
 		echo -e "\n[*] Restore del servidor Web realizado exitosamente.\n"
-
 	else
 
 		exit 1;
-
 	fi
 
 }
